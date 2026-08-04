@@ -94,26 +94,28 @@ impl<'a, T, C: Comparator<T>> SortState<'a, T, C> {
         let runs = &mut self.runs;
         while runs.len() > 1 {
             let l = runs.len();
-            if (l >= 3 && runs[l - 1].len <= runs[l - 2].len + runs[l - 1].len)
+            let (pos1, pos2) = if (l >= 3 && runs[l - 3].len <= runs[l - 2].len + runs[l - 1].len)
                 || (l >= 4 && runs[l - 4].len <= runs[l - 2].len + runs[l - 3].len)
             {
-                let (pos1, pos2) = if runs[l - 3].len < runs[l - 1].len {
+                if runs[l - 3].len < runs[l - 1].len {
                     (l - 3, l - 2)
                 } else {
                     (l - 2, l - 1)
-                };
-                let (run1, run2) = (runs[pos1], runs[pos2]);
-                debug_assert_eq!(run1.pos + run1.len, run2.pos);
-                runs.remove(pos2);
-                runs[pos1] = Run {
-                    pos: run1.pos,
-                    len: run1.len + run2.len,
-                };
-                let l = &mut self.list[run1.pos..][..run1.len + run2.len];
-                merge(l, run1.len, self.cmp)?;
+                }
+            } else if runs[l - 2].len <= runs[l - 1].len {
+                (l - 2, l - 1)
             } else {
                 break; // Invariant established.
-            }
+            };
+            let (run1, run2) = (runs[pos1], runs[pos2]);
+            debug_assert_eq!(run1.pos + run1.len, run2.pos);
+            runs.remove(pos2);
+            runs[pos1] = Run {
+                pos: run1.pos,
+                len: run1.len + run2.len,
+            };
+            let l = &mut self.list[run1.pos..][..run1.len + run2.len];
+            merge(l, run1.len, self.cmp)?;
         }
         Ok(())
     }
@@ -128,7 +130,7 @@ impl<'a, T, C: Comparator<T>> SortState<'a, T, C> {
                 pos2 -= 1;
             }
             let (run1, run2) = (runs[pos1], runs[pos2]);
-            debug_assert_eq!(run1.len, run2.pos);
+            debug_assert_eq!(run1.pos + run1.len, run2.pos);
             runs.remove(pos2);
             runs[pos1] = Run {
                 pos: run1.pos,
